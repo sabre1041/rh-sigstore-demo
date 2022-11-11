@@ -1,0 +1,70 @@
+rekor:
+  namespace:
+    name: rekor-system
+    create: false
+  server:
+    ingress:
+      className: ""
+      annotations:
+        route.openshift.io/termination: "edge"
+      hosts:
+        - host: rekor.apps.cluster-pclhm.pclhm.sandbox2559.opentlc.com
+          path: /
+
+
+fulcio:
+  namespace:
+    name: fulcio-system
+    create: false
+  createcerts:
+    enabled: false
+  server:
+    secret: fulcio-rh-server-secret
+    ingress:
+      http:
+        annotations:
+          route.openshift.io/termination: "edge"
+        className: ""
+        hosts:
+          - host: fulcio.apps.cluster-pclhm.pclhm.sandbox2559.opentlc.com
+            path: /
+  config:
+    contents:
+      OIDCIssuers:
+        ? https://keycloak-keycloak-system.apps.cluster-pclhm.pclhm.sandbox2559.opentlc.com/auth/realms/sigstore
+        : IssuerURL: https://keycloak-keycloak-system.apps.cluster-pclhm.pclhm.sandbox2559.opentlc.com/auth/realms/sigstore
+          ClientID: sigstore
+          Type: email
+
+tuf:
+  namespace:
+    name: tuf-system
+    create: false
+  secrets:
+    fulcio:
+      name: fulcio-rh-server-secret
+  enabled: true
+  ingress:
+    className: ""
+    annotations:
+      route.openshift.io/termination: "edge"
+    http:
+      hosts:
+        - host: tuf.apps.cluster-pclhm.pclhm.sandbox2559.opentlc.com
+          path: /
+
+ctlog:
+  namespace:
+    name: ctlog-system
+    create: false
+  createctconfig:
+    backoffLimit: 30
+
+trillian:
+  namespace:
+    name: trillian-system
+    create: false
+
+copySecretJob:
+  enabled: true
+  backoffLimit: 1000
