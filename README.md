@@ -23,8 +23,9 @@ The following must be in place to support the deployment of the assets contained
     2. [Helm](https://helm.sh)
     3. [jq](https://stedolan.github.io/jq)
     4. [cosign](https://docs.sigstore.dev/cosign/overview)
-    5. [envsubst](https://www.gnu.org/software/gettext/manual/html_node/envsubst-Invocation.html)
-2. OpenShift Container Platform with `cluster-admin` rights
+    5. [envsubst](https://www.gnu.org/software/gettext/manual/html_node/envsubst-Invocation.html) - [mac instructions](https://stackoverflow.com/a/37192554)
+    6. [skopeo](https://github.com/containers/skopeo/blob/main/install.md)
+2. OpenShift Container Platform *logged in* with `cluster-admin` rights
 3. IngressController configured with a certificate signed by a publicly trusted CA
 4. Persistent Storage
 5. An image available in a container registry and the ability to publish additional tags
@@ -36,6 +37,17 @@ Ensure that you are authenticated to the OpenShift cluster with the OpenShift CL
 
 ```shell
 ./setup.sh
+```
+
+*NOTE* - if you're on a mac and see an `Error Loading extension section v3_ca` before adding the sigstore helm repos cancel the execution and run this:
+
+```shell
+sudo bash -c 'cat << EOF >> /etc/ssl/openssl.cnf
+[ v3_ca ]
+basicConstraints = critical,CA:TRUE
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+EOF'
 ```
 
 Pods will fluculate in varying states as the infrastructure is established. Once complete, pods will be in the completed (from Jobs), running and ready in the following namespaces:
@@ -61,7 +73,7 @@ Next, cosign must be initialized with the TUF roots using the `cosign initialize
 cosign initialize --mirror=https://$(oc get routes -n tuf-system -o jsonpath='{.items[0].spec.host }') --root=https://$(oc get routes -n tuf-system -o jsonpath='{.items[0].spec.host }')/root.json
 ```
 
-NOTE: If a previously instance of Sigstore was configured (such as the public good instance), remove the content.
+*NOTE*: If a previously instance of Sigstore was configured (such as the public good instance), remove the content.
 
 ```shell
 rm -rf $HOME/.sigstore
@@ -75,6 +87,12 @@ Set the variable `IMAGE` with the location of the desired image to sign
 
 ```shell
 export IMAGE=<image>
+```
+
+*NOTE* - if you're running a mac with podman then login to your repository (eg Quay.io) by passing in the authfile location of where docker normally lives
+
+```shell
+mkdir -p $HOME/.docker; podman login quay.io -u springdo --authfile=$HOME/.docker/config.json
 ```
 
 Now sign the image by specifying the location of Fulcio, Rekor, Keycloak OIDC issuer and a reference to the variable containing the image set previously.
