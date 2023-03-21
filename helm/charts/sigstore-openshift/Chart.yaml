@@ -1,0 +1,8 @@
+apiVersion: v2
+name: sigstore-openshift
+description: Wrapper of the Sigstore scaffolding chart to support deployment to OpenShift
+version: 0.1.0
+# dependencies:
+#   - name: scaffolding
+#     version: x
+#     repository: https://sigstore.github.io/helm-charts

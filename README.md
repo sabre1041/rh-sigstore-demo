@@ -53,18 +53,18 @@ The exposed URL's will be displayed at the end of the setup script.
 
 With the Sigstore architecture deployed and running, it can be used to sign and verify an image. 
 
-First, set `COSIGN_EXPERIMENTAL=1` to enable keyless signing
-
-```shell
-export COSIGN_EXPERIMENTAL=1
-```
-
 ### Initialize TUF
 
 Next, cosign must be initialized with the TUF roots using the `cosign initialize` command
 
 ```shell
 cosign initialize --mirror=https://$(oc get routes -n tuf-system -o jsonpath='{.items[0].spec.host }') --root=https://$(oc get routes -n tuf-system -o jsonpath='{.items[0].spec.host }')/root.json
+```
+
+NOTE: If a previously instance of Sigstore was configured (such as the public good instance), remove the content.
+
+```shell
+rm -rf $HOME/.sigstore
 ```
 
 ### Sign an Image
@@ -77,10 +77,10 @@ Set the variable `IMAGE` with the location of the desired image to sign
 export IMAGE=<image>
 ```
 
-Now sign the image by specifiying the location of Fulcio, Rekor, Keycloak OIDC issuer and a reference to the variable containing the image set previously.
+Now sign the image by specifying the location of Fulcio, Rekor, Keycloak OIDC issuer and a reference to the variable containing the image set previously.
 
 ```shell
-cosign sign --force -y --fulcio-url=https://$(oc get routes -n fulcio-system -o jsonpath='{.items[0].spec.host }') --rekor-url=https://$(oc get routes -n rekor-system -o jsonpath='{.items[0].spec.host }') --oidc-issuer=https://$(oc get routes -n keycloak-system -o jsonpath='{.items[0].spec.host }')/auth/realms/sigstore $IMAGE
+cosign sign --yes -y --fulcio-url=https://$(oc get routes -n fulcio-system -o jsonpath='{.items[0].spec.host }') --rekor-url=https://$(oc get routes -n rekor-system -o jsonpath='{.items[0].spec.host }') --oidc-issuer=https://$(oc get routes -n keycloak-system -o jsonpath='{.items[0].spec.host }')/auth/realms/sigstore $IMAGE
 ```
 
 A browser window will be launched to authenticate to Keycloak. As part of the setup, a single user called `sigstore` was created. Enter the following credentials:
@@ -97,7 +97,7 @@ Once an image has been signed, it can be verified in a number of forms.
 First, use `cosign` to verify the image by executing the following command:
 
 ```shell
-cosign verify --rekor-url=https://$(oc get routes -n rekor-system -o jsonpath='{.items[0].spec.host }') $IMAGE
+cosign verify --certificate-identity=sigstore@redhat.com --certificate-oidc-issuer=https://keycloak-keycloak-system.apps.$(oc get dns cluster -o jsonpath='{ .spec.baseDomain }')/auth/realms/sigstore --rekor-url=https://$(oc get routes -n rekor-system -o jsonpath='{.items[0].spec.host }') $IMAGE
 ```
 
 `cosign` will then verify the signature with the record published in Rekor
@@ -105,7 +105,7 @@ cosign verify --rekor-url=https://$(oc get routes -n rekor-system -o jsonpath='{
 Additional verification can be performed to confirmed that the OIDC details from Keycloak was also attached to the certificate:
 
 ```shell
-skopeo inspect --raw --tls-verify=false docker://localhost:5000/sigstore/ubi8:sha256-397baf12363eb4fee845c94b0244e6b7d7341d13a8b59756fd5a738a3dce7343.sig | jq -r '.layers[0].annotations["dev.sigstore.cosign/certificate"]' | openssl x509 -noout -text
+skopeo inspect --raw --tls-verify=false docker://$(cosign triangulate $IMAGE) | jq -r '.layers[0].annotations["dev.sigstore.cosign/certificate"]' | openssl x509 -noout -text
 ```
 
 In the _X509v3_ extension properties, you should be able to located the URL of the Keycloak instance and the email from the Keycloak user:

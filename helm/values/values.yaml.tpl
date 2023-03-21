@@ -8,7 +8,7 @@ rekor:
       annotations:
         route.openshift.io/termination: "edge"
       hosts:
-        - host: rekor.apps.cluster-pclhm.pclhm.sandbox2559.opentlc.com
+        - host: rekor.apps.$BASE_DOMAIN
           path: /
 
 
@@ -19,20 +19,20 @@ fulcio:
   createcerts:
     enabled: false
   server:
-    secret: fulcio-rh-server-secret
+    secret: $FULCIO_SERVER_SECRET_NAME
     ingress:
       http:
         annotations:
           route.openshift.io/termination: "edge"
         className: ""
         hosts:
-          - host: fulcio.apps.cluster-pclhm.pclhm.sandbox2559.opentlc.com
+          - host: fulcio.apps.$BASE_DOMAIN
             path: /
   config:
     contents:
       OIDCIssuers:
-        ? https://keycloak-keycloak-system.apps.cluster-pclhm.pclhm.sandbox2559.opentlc.com/auth/realms/sigstore
-        : IssuerURL: https://keycloak-keycloak-system.apps.cluster-pclhm.pclhm.sandbox2559.opentlc.com/auth/realms/sigstore
+        ? https://keycloak-keycloak-system.apps.$BASE_DOMAIN/auth/realms/sigstore
+        : IssuerURL: https://keycloak-keycloak-system.apps.$BASE_DOMAIN/auth/realms/sigstore
           ClientID: sigstore
           Type: email
 
@@ -42,7 +42,7 @@ tuf:
     create: false
   secrets:
     fulcio:
-      name: fulcio-rh-server-secret
+      name: $FULCIO_SERVER_SECRET_NAME
   enabled: true
   ingress:
     className: ""
@@ -50,7 +50,7 @@ tuf:
       route.openshift.io/termination: "edge"
     http:
       hosts:
-        - host: tuf.apps.cluster-pclhm.pclhm.sandbox2559.opentlc.com
+        - host: tuf.apps.$BASE_DOMAIN
           path: /
 
 ctlog:
@@ -64,6 +64,9 @@ trillian:
   namespace:
     name: trillian-system
     create: false
+
+tsa:
+  enabled: false
 
 copySecretJob:
   enabled: true
